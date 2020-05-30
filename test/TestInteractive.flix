@@ -39,4 +39,44 @@ def test06(): String & Impure =
         let* ans = FlixInteractive/DecodeError.decodeTypeEvaluation(content);
         Ok(FlixInteractive/DecodeError.showMessage(ans))
     };
-    step() |> x -> Result.getWithDefault(x, "** bad **")    
+    step() |> x -> Result.getWithDefault(x, "** bad **")   
+
+
+@test
+def test07(): String & Impure = 
+    use Result.flatMap;
+    let step = () -> {
+        let path = System/FilePath.new("E:/coding/flix/flix-interactive/notes/err2.txt");
+        let* content = System/File.readFile(path, Text/Charset.utf_8());
+        let* ans = FlixInteractive/DecodeError.decodeResolutionError(content);
+        Ok(FlixInteractive/DecodeError.showMessage(ans))
+    };
+    step() |> x -> Result.getWithDefault(x, "** bad **")
+
+
+@test
+def test08(): String & Impure = 
+    use Result.flatMap;
+    let step = () -> {
+        let path = System/FilePath.new("E:/coding/flix/flix-interactive/notes/err3.txt");
+        let* content = System/File.readFile(path, Text/Charset.utf_8());
+        let* ans = FlixInteractive/DecodeError.decodeTypeError(content);
+        Ok(FlixInteractive/DecodeError.showMessage(ans))
+    };
+    step() |> x -> Result.getWithDefault(x, "** bad **")   
+
+@test
+def test09(): String & Impure = 
+    use Result.flatMap;
+    let step = () -> {
+        let path = System/FilePath.new("E:/coding/flix/flix-interactive/notes/err7.txt");
+        let* content = System/File.readFile(path, Text/Charset.utf_8());
+        let* ans = FlixInteractive/DecodeError.decodeError(content);
+        Ok(FlixInteractive/DecodeError.showMessage(ans))
+    };
+    step() |> x -> Result.getWithDefault(x, "** bad **")   
+
+@test
+def test10(): Result[Unit, System.Error] & Impure = 
+    FlixInteractive/TopLevel.loop()
+

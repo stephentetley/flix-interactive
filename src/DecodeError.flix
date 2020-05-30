@@ -21,7 +21,7 @@ namespace FlixInteractive/DecodeError {
     pub enum EvalError {
         case TypeEvaluation({exprType: String}),
         case ResolutionError({undefinedName: String}),
-        case TypeError({message: String}),
+        case TypeError({type1: String, type2: String}),
         case ParseError({message: String}),
         case RuntimeError({message: String}),
         case UnhandledError({message: String})
@@ -29,8 +29,8 @@ namespace FlixInteractive/DecodeError {
     
     pub def showMessage(x: EvalError): String = match x {
         case TypeEvaluation(r)      => "Type Evaluation: " + r.exprType
-        case ResolutionError(r)     => "Resultution Error: " + r.undefinedName
-        case TypeError(r)           => "Type Error" + r.message
+        case ResolutionError(r)     => "Resolution Error: " + r.undefinedName
+        case TypeError(r)           => "Type Error: Unable to unify '" + r.type1 + "' and '" + r.type2 + "'"
         case ParseError(r)          => "Parse Error:" + r.message
         case RuntimeError(r)        => "Runtime Error: " + r.message
         case UnhandledError(r)      => "Unhandled Error: " + r.message
@@ -45,6 +45,95 @@ namespace FlixInteractive/DecodeError {
             Ok()
         else
             Err(InputMismatchException)
+
+    def assertNotMatch(pattern: String, input: String): Result[Unit, System.Error] = 
+        use Result.flatMap;
+        use Text/Regex/Pattern.Flag.{Multiline};
+        let* patt   = Text/Regex/Pattern.compileWithFlags(pattern, Multiline :: Nil);
+        let ans     = Text/Regex.isSubmatch(patt, input);
+        if (!ans) 
+            Ok()
+        else
+            Err(InputMismatchException)
+
+
+    ///
+    /// \u002D is dash `-`
+    /// \u005B is left square bracket `[`
+    /// \u001B is escape
+    ///
+    /// Must see the headline `Type Error` plus lines with `    let ans = ...` & `    Console.printLine(ans)`
+    /// The we try to decode `Type Two`.
+    ///
+    pub def decodeTypeEvaluation(msg: String): Result[EvalError, System.Error] & Impure = 
+        use Result.flatMap;
+        use Text/Regex/Pattern.Flag.{Multiline};
+        use Text/Regex/MatchEvaluator.{getCaptureByName};
+        let* _      = assertMatch("\u002D{2,} Type Error \u002D{5,}", msg);
+        let* _      = assertMatch("\u001B\u005B0m\s+let ans = ", msg);
+        let* _      = assertMatch("\u001B\u005B0m\s+Console\.printLine\(ans\)", msg);
+        let* patt   = Text/Regex/Pattern.compileWithFlags("Type Two: \u001B\u005B35m(?<exprtype>.+)\u001B\u005B0m", Multiline :: Nil);
+        let* ans    = Text/Regex.evaluateSubmatch(patt, getCaptureByName("exprtype"), msg);
+        Ok(TypeEvaluation({exprType = ans}))
+
+    ///
+    /// \u002D is dash `-`
+    /// \u003F is question mark `?`
+    /// \u005B is left square bracket `[`
+    /// \u001B is escape
+    ///
+    /// Must see the headline `Type Error` plus lines with `    let ans = ...` & `    Console.printLine(ans)`
+    /// The we try to decode `Type Two`.
+    ///
+    pub def decodeResolutionError(msg: String): Result[EvalError, System.Error] & Impure = 
+        use Result.flatMap;
+        use Text/Regex/Pattern.Flag.{Multiline};
+        use Text/Regex/MatchEvaluator.{getCaptureByName};
+        let* _      = assertMatch("\u002D{2,} Resolution Error \u002D{5,}", msg);
+        let* _      = assertMatch("Possible typo or non-existent definition\u003F", msg);
+        let* patt   = Text/Regex/Pattern.compileWithFlags("Undefined name '\u001B\u005B31m(?<undefined>.+)\u001B\u005B0m'", Multiline :: Nil);
+        let* ans    = Text/Regex.evaluateSubmatch(patt, getCaptureByName("undefined"), msg);
+        Ok(ResolutionError({undefinedName = ans}))
+
+    ///
+    /// \u002D is dash `-`
+    /// \u005B is left square bracket `[`
+    /// \u001B is escape
+    ///
+    /// Must see the headline `Type Error`.
+    /// Must not see `    Console.printLine(ans)`
+    /// The we try to decode `Type Two`.
+    ///
+    pub def decodeTypeError(msg: String): Result[EvalError, System.Error] & Impure = 
+        use Result.flatMap;
+        use Text/Regex/Pattern.Flag.{Multiline};
+        use Text/Regex/MatchEvaluator.{getCaptureByName};
+        let* _      = assertMatch("\u002D{2,} Type Error \u002D{5,}", msg);
+        let* _      = assertNotMatch("\u001B\u005B0m\s+Console\.printLine\(ans\)", msg);
+        let* patt1   = Text/Regex/Pattern.compileWithFlags("Type One: \u001B\u005B36m(?<typeone>.+)\u001B\u005B0m", Multiline :: Nil);
+        let* ans1    = Text/Regex.evaluateSubmatch(patt1, getCaptureByName("typeone"), msg);
+        let* patt2   = Text/Regex/Pattern.compileWithFlags("Type Two: \u001B\u005B35m(?<typetwo>.+)\u001B\u005B0m", Multiline :: Nil);
+        let* ans2    = Text/Regex.evaluateSubmatch(patt2, getCaptureByName("typetwo"), msg);
+        Ok(TypeError({type1 = ans1, type2 = ans2}))
+
+
+    ///
+    /// \u002D is dash `-`
+    /// \u005B is left square bracket `[`
+    /// \u001B is escape
+    ///
+    /// Must see the headline `Type Error`.
+    /// Must not see `    Console.printLine(ans)`
+    /// The we try to decode `Type Two`.
+    ///
+    pub def decodeParseError(msg: String): Result[EvalError, System.Error] & Impure = 
+        use Result.flatMap;
+        use Text/Regex/Pattern.Flag.{Multiline};
+        use Text/Regex/MatchEvaluator.{getCaptureByName};
+        let* _      = assertMatch("\u002D{2,} Parse Error \u002D{5,}", msg);
+        let* _      = assertNotMatch("\u001B\u005B0m\s+Console\.printLine\(ans\)", msg);
+        Ok(ParseError({message = "todo"})) as & Impure
+
 
 
     ///
@@ -65,15 +154,17 @@ namespace FlixInteractive/DecodeError {
         let* ans    = Text/Regex.evaluateSubmatch(patt, getCaptureByName("message"), msg);
         Ok(RuntimeError({message = ans}))
 
-    /// \u001B is escape
-    /// \u005B is left square bracket `[`
-    pub def decodeTypeEvaluation(msg: String): Result[EvalError, System.Error] & Impure = 
-        use Result.flatMap;
-        use Text/Regex/Pattern.Flag.{Multiline};
-        use Text/Regex/MatchEvaluator.{getCaptureByName};
-        let* _      = assertMatch("    let ans = ", msg);
-        let* _      = assertMatch("    Console\.printLine", msg);
-        let* patt   = Text/Regex/Pattern.compileWithFlags("Type Two: \u001B\u005B35m(?<exprtype>.+)\u001B\u005B0m", Multiline :: Nil);
-        let* ans    = Text/Regex.evaluateSubmatch(patt, getCaptureByName("exprtype"), msg);
-        Ok(TypeEvaluation({exprType = ans}))
+    def alt(x: Result[a,e], y: Result[a,e]): Result[a,e] = 
+        match x { 
+            case Ok(a) => Ok(a)
+            case Err(_) => y
+        }
+
+    pub def decodeError(msg: String): Result[EvalError, System.Error] & Impure = 
+        alt(decodeTypeEvaluation(msg), 
+            alt(decodeResolutionError(msg), 
+                alt(decodeTypeError(msg), 
+                    alt(decodeParseError(msg), decodeRuntimeError(msg)))))
+
+
 }
