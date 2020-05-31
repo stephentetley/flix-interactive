@@ -78,5 +78,6 @@ def test09(): String & Impure =
 
 @test
 def test10(): Result[Unit, System.Error] & Impure = 
-    FlixInteractive/TopLevel.loop()
+    use FlixInteractive/TopLevel.{runTopLevel, loop};
+    runTopLevel(loop())
 
