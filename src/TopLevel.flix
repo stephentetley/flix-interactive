@@ -139,7 +139,8 @@ namespace FlixInteractive/TopLevel {
                 loop()
             }
             case Exec(expr) => { 
-                let* _      = compileAndRun(expr);
+                let* ans    = compileAndRun(expr);
+                let* _      = consolePrint(ans);
                 loop()
             }
             case Help => {
@@ -173,12 +174,14 @@ namespace FlixInteractive/TopLevel {
         let prgm1   = FlixInteractive/GenProgram.genWithoutType(expr);
         let* _      = writeMain(prgm1);
         let* ans1   = execFlix();
-        let* _      = consolePrint("stdout: <<<" + ans1.stdOut + ">>>");
-        let* _      = consolePrint("stderr: <<<" + ans1.stdErr + ">>>");
-        let* _      = consolePrint("decodeEval...");
+        // let* _      = consolePrint("stdout: <<<" + ans1.stdOut + ">>>");
+        // let* _      = consolePrint("stderr: <<<" + ans1.stdErr + ">>>");
+        // let* _      = consolePrint("decodeEval...");
         let* eval1  = liftResult(_ -> FlixInteractive/DecodeEval.decodeEval(ans1.stdOut, ans1.stdErr));
-        let* _      = consolePrint("decodeEval done");
+        // let* _      = consolePrint("decodeEval done");
+        let* _      = consolePrint(FlixInteractive/DecodeEval.showMessage(eval1));
         match eval1 {
+            case FlixInteractive/DecodeEval/EvalAnswer.ValidAnswer(s) =>  return(s)
             case FlixInteractive/DecodeEval/EvalAnswer.TypeEvaluation(typename) => { 
                 let prgm2   = FlixInteractive/GenProgram.genWithType(expr, typename);
                 let* _      = writeMain(prgm2);

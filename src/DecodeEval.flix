@@ -66,31 +66,35 @@ namespace FlixInteractive/DecodeEval {
 
     def decodeStdout(stdout: String): Result[EvalAnswer, System.Error] & Impure = 
         use Result.flatMap;
-        let* errname = getErrorName(stdout);
-        let _ = Console.printLine("Error is: " + errname);
+        let errname = getErrorName(stdout);
         match errname { 
-            case "Parse Error" => Ok(ParseError)
-            case "Resolution Error" => { 
+            case Some("Parse Error") => Ok(ParseError)
+            case Some("Resolution Error") => { 
                 let* name = getUnresolvedName(stdout);
                 Ok(ResolutionError(name))
             }
-            case "Type Error" => { 
+            case Some("Type Error") => { 
                 let* type1 = getTypeOne(stdout);
                 let* type2 = getTypeTwo(stdout);
                 let* isExpected = cannotTypeOutput(stdout);
                 if (isExpected)
-                    Ok(TypeEvaluation(type1))
+                    Ok(TypeEvaluation(type2))
                 else 
                     Ok(TypeError(type1, type2))
             }
-            case _ => Ok(ValidAnswer(stdout))
+            case Some(s) => Ok(UnhandledError(s))
+            case None => Ok(ValidAnswer(stdout))
         }
 
-    def getErrorName(stdout: String): Result[String, System.Error] & Impure = 
+    def getErrorName(stdout: String): Option[String] & Impure = 
         use Result.flatMap;
         use Text/Regex/MatchEvaluator.{getCaptureByName};
-        let* patt = Text/Regex/Pattern.compile("\u002D{2,} (?<errname>.+ Error) \u002D{50,}");
-        Text/Regex.evaluateSubmatch(patt, getCaptureByName("errname"), stdout)
+        let step = () -> {
+            let* patt = Text/Regex/Pattern.compile("\u002D{2,} (?<errname>.+ Error) \u002D{50,}");
+            Text/Regex.evaluateSubmatch(patt, getCaptureByName("errname"), stdout)
+        }; 
+        step() |> Result.toOption
+
         
 
 
@@ -126,7 +130,7 @@ namespace FlixInteractive/DecodeEval {
         use Result.flatMap;
         use Text/Regex/Pattern.Flag.{Multiline};
         use Text/Regex/MatchEvaluator.{getCaptureByName};
-        let* patt   = Text/Regex/Pattern.compileWithFlags("Type Two: \u001B\u005B36m(?<name>.+)\u001B\u005B0m", Multiline :: Nil);
+        let* patt   = Text/Regex/Pattern.compileWithFlags("Type Two: \u001B\u005B35m(?<name>.+)\u001B\u005B0m", Multiline :: Nil);
         let* ans    = Text/Regex.evaluateSubmatch(patt, getCaptureByName("name"), stdout);
         Ok(ans)
 

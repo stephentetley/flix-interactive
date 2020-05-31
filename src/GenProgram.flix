@@ -16,6 +16,8 @@
 
 namespace FlixInteractive/GenProgram {
 
+    // TODO - should output something encloseing the answer so it is easier to recognize...
+
     def genMain(expr: String): String = 
         String.unlines(
             "def main(): Unit & Impure = "
