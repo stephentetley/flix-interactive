@@ -19,21 +19,21 @@ use System.Error.{InputMismatchException};
 namespace FlixInteractive/DecodeError {
 
     pub enum EvalError {
-        case TypeEvaluation({exprType: String}),
-        case ResolutionError({undefinedName: String}),
-        case TypeError({type1: String, type2: String}),
-        case ParseError({message: String}),
-        case RuntimeError({message: String}),
-        case UnhandledError({message: String})
+        case TypeEvaluation(String),            // TypeName
+        case ResolutionError(String),           // Missing symbol
+        case TypeError(String, String),        // TypeOne & TypeTwo
+        case ParseError(String),
+        case RuntimeError(String),
+        case UnhandledError(String)
     }
     
     pub def showMessage(x: EvalError): String = match x {
-        case TypeEvaluation(r)      => "Type Evaluation: " + r.exprType
-        case ResolutionError(r)     => "Resolution Error: " + r.undefinedName
-        case TypeError(r)           => "Type Error: Unable to unify '" + r.type1 + "' and '" + r.type2 + "'"
-        case ParseError(r)          => "Parse Error:" + r.message
-        case RuntimeError(r)        => "Runtime Error: " + r.message
-        case UnhandledError(r)      => "Unhandled Error: " + r.message
+        case TypeEvaluation(s)      => "Type Evaluation: " + s
+        case ResolutionError(s)     => "Resolution Error: " + s
+        case TypeError(t1, t2)      => "Type Error: Unable to unify '" + t1 + "' and '" + t2 + "'"
+        case ParseError(s)          => "Parse Error:" + s
+        case RuntimeError(s)        => "Runtime Error: " + s
+        case UnhandledError(s)      => "Unhandled Error: " + s
     }
 
     def assertMatch(pattern: String, input: String): Result[Unit, System.Error] = 
@@ -74,7 +74,7 @@ namespace FlixInteractive/DecodeError {
         let* _      = assertMatch("\u001B\u005B0m\s+Console\.printLine\(ans\)", msg);
         let* patt   = Text/Regex/Pattern.compileWithFlags("Type Two: \u001B\u005B35m(?<exprtype>.+)\u001B\u005B0m", Multiline :: Nil);
         let* ans    = Text/Regex.evaluateSubmatch(patt, getCaptureByName("exprtype"), msg);
-        Ok(TypeEvaluation({exprType = ans}))
+        Ok(TypeEvaluation(ans))
 
     ///
     /// \u002D is dash `-`
@@ -93,7 +93,7 @@ namespace FlixInteractive/DecodeError {
         let* _      = assertMatch("Possible typo or non-existent definition\u003F", msg);
         let* patt   = Text/Regex/Pattern.compileWithFlags("Undefined name '\u001B\u005B31m(?<undefined>.+)\u001B\u005B0m'", Multiline :: Nil);
         let* ans    = Text/Regex.evaluateSubmatch(patt, getCaptureByName("undefined"), msg);
-        Ok(ResolutionError({undefinedName = ans}))
+        Ok(ResolutionError(ans))
 
     ///
     /// \u002D is dash `-`
@@ -114,7 +114,7 @@ namespace FlixInteractive/DecodeError {
         let* ans1    = Text/Regex.evaluateSubmatch(patt1, getCaptureByName("typeone"), msg);
         let* patt2   = Text/Regex/Pattern.compileWithFlags("Type Two: \u001B\u005B35m(?<typetwo>.+)\u001B\u005B0m", Multiline :: Nil);
         let* ans2    = Text/Regex.evaluateSubmatch(patt2, getCaptureByName("typetwo"), msg);
-        Ok(TypeError({type1 = ans1, type2 = ans2}))
+        Ok(TypeError(ans1, ans2))
 
 
     ///
@@ -132,7 +132,7 @@ namespace FlixInteractive/DecodeError {
         use Text/Regex/MatchEvaluator.{getCaptureByName};
         let* _      = assertMatch("\u002D{2,} Parse Error \u002D{5,}", msg);
         let* _      = assertNotMatch("\u001B\u005B0m\s+Console\.printLine\(ans\)", msg);
-        Ok(ParseError({message = "todo"})) as & Impure
+        Ok(ParseError("todo")) as & Impure
 
 
 
@@ -152,7 +152,7 @@ namespace FlixInteractive/DecodeError {
         use Text/Regex/MatchEvaluator.{getCaptureByName};
         let* patt   = Text/Regex/Pattern.compile("^Exception in thread \u0022main\u0022 (?<message>.+)");
         let* ans    = Text/Regex.evaluateSubmatch(patt, getCaptureByName("message"), msg);
-        Ok(RuntimeError({message = ans}))
+        Ok(RuntimeError(ans))
 
     def alt(x: Result[a,e], y: Result[a,e]): Result[a,e] = 
         match x { 

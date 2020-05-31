@@ -16,6 +16,8 @@
 
 use System.FilePath;
 
+use FlixInteractive/ExecFlix.FlixAnswer;
+
 namespace FlixInteractive/TopLevel {
 
     type alias State = { cwd: FilePath, pathToFlixJar: FilePath }
@@ -23,7 +25,7 @@ namespace FlixInteractive/TopLevel {
     pub opaque type TopLevel[a] = State ~> Result[(a, State), System.Error]
 
     pub def runTopLevel(x: TopLevel[a]): Result[a, System.Error] & Impure = 
-        let wdPath = System/FilePath.new("d:/coding/flix/temp");
+        let wdPath = System/FilePath.new("e:/coding/flix/temp");
         let flixPath = System/FilePath.new("../flix.jar" );
         let state = { cwd = wdPath, pathToFlixJar = flixPath};
         match apply1(x, state) {
@@ -87,9 +89,15 @@ namespace FlixInteractive/TopLevel {
             Ok((), st1) as & Impure
         )
 
-    pub def getWorkingDirectory(): TopLevel[FilePath] = 
+    def getWorkingDirectory(): TopLevel[FilePath] = 
         TopLevel(st -> Ok((st.cwd, st)) as & Impure)
 
+    def getFlixJarPath(): TopLevel[FilePath] = 
+        TopLevel(st -> Ok((st.pathToFlixJar, st)) as & Impure)
+
+
+    def consolePrint(s: String): TopLevel[Unit] = 
+        liftAction(_ -> Console.printLine(s))
 
     enum Command {
         case Cwd(String),
@@ -126,41 +134,58 @@ namespace FlixInteractive/TopLevel {
                 loop()
             }
             case Exec(expr) => { 
-                let program   = FlixInteractive/GenProgram.genWithoutType(expr);
-                let* path    = liftAction(_ -> System/FilePath.new("E:/coding/flix/temp/Main.flix"));
-                let* _       = liftResult(_ -> System/File.writeFile(path, Text/Charset.utf_8(), program));
-                let* _       = liftResult(_ -> runFlix());
+                let* _      = compileAndRun(expr);
                 loop()
             }
             case Help => {
-                let* _ = liftAction(_ -> Console.printLine("Type an expression or :quit to quit"));
+                let* _      = consolePrint("Type an expression or :quit to quit");
                 loop()
             }
             case Pwd => { 
-                let* cwd = getWorkingDirectory();
-                let* _ = liftAction(_ -> Console.printLine(System/FilePath.toString(cwd)));
+                let* cwd    = getWorkingDirectory();
+                let* ans    = liftAction(_ -> System/FilePath.toString(cwd));
+                let* _      = consolePrint(ans);
                 loop()
             }
             case Quit => return()
             case Unknown(s) => {
-                let* _ = liftAction(_ -> Console.printLine("Unknown command: " + s));
+                let* _ = consolePrint("Unknown command: " + s);
                 loop()
             }
         }
 
-    /// powershell> java -jar ..\..\flix.jar Program.flix
 
-    def runFlix(): Result[Int32, System.Error] & Impure = 
-        use Result.flatMap;
-        use System/Process.{directory!, start, getInput, waitFor};
-        let pb      = System/Process.newProcessBuilder("java", ["-jar", "..\flix.jar", "Main.flix"]);
-        let cwd     = System/FilePath.new("E:/coding/flix/temp");
-        let _       = pb.directory!(cwd);
-        let* proc   = start(pb);
-        let* str    = getInput(proc, Text/Charset.utf_8());
-        let _       = Console.printLine(str);
-        let* exitCode   = waitFor(proc);
-        Ok(exitCode)
+    def writeMain(program: String): TopLevel[Unit] = 
+        let* cwd    = getWorkingDirectory();
+        let* file1  = liftAction(_ -> System/FilePath.new("Main.flix"));
+        let* path   = liftAction(_ -> System/FilePath.append(cwd, file1));
+        let* _      = liftResult(_ -> System/File.writeFile(path, Text/Charset.utf_8(), program));
+        return()
+
+    
+
+    def compileAndRun(expr: String): TopLevel[String] = 
+        let prgm1   = FlixInteractive/GenProgram.genWithoutType(expr);
+        let* _      = writeMain(prgm1);
+        let* ans1   = execFlix();
+        let* eval1  = liftResult(_ -> FlixInteractive/DecodeError.decodeError(ans1.stdOut));
+        match eval1 {
+            case FlixInteractive/DecodeError/EvalError.TypeEvaluation(typename) => { 
+                let prgm2   = FlixInteractive/GenProgram.genWithType(expr, typename);
+                let* _      = writeMain(prgm2);
+                let* ans2   = execFlix();
+                return(ans2.stdOut)
+            }
+            case e => {
+                let str = FlixInteractive/DecodeError.showMessage(e);
+                return(str)
+            }
+        }
         
+    def execFlix(): TopLevel[FlixAnswer] = 
+        let* cwd    = getWorkingDirectory();
+        let* jar    = getFlixJarPath();
+        let* main1  = liftAction(_ -> System/FilePath.new("Main.flix"));
+        liftResult(_ -> FlixInteractive/ExecFlix.execFlix(cwd, jar, main1 :: Nil))
 
 }    

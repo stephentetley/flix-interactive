@@ -17,7 +17,7 @@ def test03(): Unit & Impure =
 
 @test
 def test04(): FlixInteractive/DecodeError.EvalError = 
-    FlixInteractive/DecodeError/EvalError.TypeEvaluation({exprType = "Int32"})
+    FlixInteractive/DecodeError/EvalError.TypeEvaluation("Int32")
 
 @test
 def test05(): String & Impure = 
