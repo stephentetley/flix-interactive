@@ -99,6 +99,10 @@ namespace FlixInteractive/TopLevel {
     def consolePrint(s: String): TopLevel[Unit] = 
         liftAction(_ -> Console.printLine(s))
 
+    def consolePrintPrompt(): TopLevel[Unit] = 
+        liftAction(_ -> Console.print("flix-interactive> "))
+
+
     enum Command {
         case Cwd(String),
         case Exec(String),
@@ -126,7 +130,8 @@ namespace FlixInteractive/TopLevel {
         step() |> x -> Result.getWithDefault(x, Exec(input))
 
     pub def loop(): TopLevel[Unit] = 
-        let* input = liftAction(_ -> Console.readLine()) |> map(x -> Option.getWithDefault(x, ""));
+        let* _      = consolePrintPrompt();
+        let* input  = liftAction(_ -> Console.readLine()) |> map(x -> Option.getWithDefault(x, ""));
         match decodeInput(input) {
             case Cwd(dir) => { 
                 let* path   = liftAction(_ -> System/FilePath.new(dir));
@@ -168,16 +173,20 @@ namespace FlixInteractive/TopLevel {
         let prgm1   = FlixInteractive/GenProgram.genWithoutType(expr);
         let* _      = writeMain(prgm1);
         let* ans1   = execFlix();
-        let* eval1  = liftResult(_ -> FlixInteractive/DecodeError.decodeError(ans1.stdOut));
+        let* _      = consolePrint("stdout: <<<" + ans1.stdOut + ">>>");
+        let* _      = consolePrint("stderr: <<<" + ans1.stdErr + ">>>");
+        let* _      = consolePrint("decodeEval...");
+        let* eval1  = liftResult(_ -> FlixInteractive/DecodeEval.decodeEval(ans1.stdOut, ans1.stdErr));
+        let* _      = consolePrint("decodeEval done");
         match eval1 {
-            case FlixInteractive/DecodeError/EvalError.TypeEvaluation(typename) => { 
+            case FlixInteractive/DecodeEval/EvalAnswer.TypeEvaluation(typename) => { 
                 let prgm2   = FlixInteractive/GenProgram.genWithType(expr, typename);
                 let* _      = writeMain(prgm2);
                 let* ans2   = execFlix();
                 return(ans2.stdOut)
             }
             case e => {
-                let str = FlixInteractive/DecodeError.showMessage(e);
+                let str = FlixInteractive/DecodeEval.showMessage(e);
                 return(str)
             }
         }
