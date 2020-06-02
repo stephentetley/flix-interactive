@@ -1,23 +1,23 @@
 use FlixInteractive/GenProgram.{genWithoutType, genWithType};
 
-@test
-def test01(): Unit & Impure = 
-    let s = genWithoutType("3 + 4");
-    Console.printLine(s)
+// @test
+// def test01(): Unit & Impure = 
+//     let s = genWithoutType("3 + 4");
+//     Console.printLine(s)
 
-@test
-def test02(): Unit & Impure = 
-    let s = genWithType("3 + 4", "Int32");
-    Console.printLine(s)
+// @test
+// def test02(): Unit & Impure = 
+//     let s = genWithType("3 + 4", "Int32");
+//     Console.printLine(s)
 
-@test
-def test03(): Unit & Impure = 
-    let s = genWithType("1 :: Nil", "List[Int32]");
-    Console.printLine(s)
+// @test
+// def test03(): Unit & Impure = 
+//     let s = genWithType("1 :: Nil", "List[Int32]");
+//     Console.printLine(s)
 
-@test
-def test04(): FlixInteractive/DecodeEval.EvalAnswer = 
-    FlixInteractive/DecodeEval/EvalAnswer.TypeEvaluation("Int32")
+// @test
+// def test04(): FlixInteractive/DecodeEval.EvalAnswer = 
+//     FlixInteractive/DecodeEval/EvalAnswer.TypeEvaluation("Int32")
 
 // @test
 // def test05(): String & Impure = 

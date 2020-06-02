@@ -14,29 +14,38 @@
  * limitations under the License.
  */
 
+use Text/PrettyPrint.{Doc, text, hang, semi, line, tupled, dquotes};
+
 namespace FlixInteractive/GenProgram {
 
-    // TODO - should output something encloseing the answer so it is easier to recognize...
+    def <>(x: Doc, y: Doc): Doc = Text/PrettyPrint.beside(x,y)
+    def <<>>(x: Doc, y:Doc): Doc = Text/PrettyPrint.besideSpace(x,y)
+    def <&>(x: Doc, y: Doc): Doc = x <> line() <> y
 
-    def genMain(expr: String): String = 
-        String.unlines(
-            "def main(): Unit & Impure = "
-            :: ("    let ans = " + expr + ";")
-            :: "    Console.printLine(ans)"
-            :: Nil
+    def string(s: String): Doc = 
+        dquotes(text(s))
+
+
+    def funcall(name: String, args: List[Doc]): Doc = 
+        text(name) <> tupled(args)
+
+    def genMain(expr: Doc): Doc = 
+        hang(4, text("def main(): Unit & Impure =") 
+            <&> text("let ans =") <<>> expr <> semi()
+            <&> funcall("Console.printLine", string("~~~ {.answer}") :: Nil) <> semi()
+            <&> funcall("Console.printLine", text("ans") :: Nil) <> semi()
+            <&> funcall("Console.printLine", string("~~~") :: Nil) <> semi()
+            <&> text("()")
         )
 
-    def doubleQuote(s: String): String = Char.toString('"') + s + Char.toString('"')
-
-    def funcall(name: String, body: String): String = name + "(" + body + ")"
-
-    pub def genWithoutType(expr: String): String = genMain(expr)
+    
+    pub def genWithoutType(expr: String): Doc = genMain(text(expr))
 
 
-    pub def genWithType(expr: String, typeName: String): String = 
+    pub def genWithType(expr: String, typeName: String): Doc = 
         match FlixInteractive/Typing.getPrinter(typeName) {
-            case None => { let body = doubleQuote("<<" + typeName + ">>"); genMain(body)}
-            case Some(fn) => { let body = funcall(fn, expr); genMain(body)}
+            case None => { let body = string("<<" + typeName + ">>"); genMain(body)}
+            case Some(fn) => { let body = funcall(fn, text(expr) :: Nil); genMain(body)}
         }
 
 }

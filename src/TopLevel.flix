@@ -15,6 +15,7 @@
  */
 
 use System.FilePath;
+use Text/PrettyPrint.{Doc, writePretty!};
 
 use FlixInteractive/ExecFlix.FlixAnswer;
 
@@ -161,11 +162,12 @@ namespace FlixInteractive/TopLevel {
         }
 
 
-    def writeMain(program: String): TopLevel[Unit] = 
+    def writeMain(program: Doc): TopLevel[Unit] = 
         let* cwd    = getWorkingDirectory();
         let* file1  = liftAction(_ -> System/FilePath.new("Main.flix"));
         let* path   = liftAction(_ -> System/FilePath.append(cwd, file1));
-        let* _      = liftResult(_ -> System/File.writeFile(path, Text/Charset.utf_8(), program));
+        let* spath  = liftAction(_ -> System/FilePath.toString(path));
+        let* _      = liftResult(_ -> Text/PrettyPrint.writePretty!(160, spath, Text/Charset.utf_8(), program));
         return()
 
     
