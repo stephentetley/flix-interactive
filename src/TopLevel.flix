@@ -35,6 +35,8 @@ namespace FlixInteractive/TopLevel {
         }
 
 
+    
+
     pub def return(x: a): TopLevel[a] = 
         TopLevel(st -> Ok((x,st)) as & Impure)
 
@@ -101,7 +103,7 @@ namespace FlixInteractive/TopLevel {
         liftAction(_ -> Console.printLine(s))
 
     def consolePrintPrompt(): TopLevel[Unit] = 
-        liftAction(_ -> Console.print("flix-interactive> "))
+        liftAction(_ -> Console.print("flix> "))
 
 
     enum Command {
@@ -130,7 +132,11 @@ namespace FlixInteractive/TopLevel {
         };
         step() |> x -> Result.getWithDefault(x, Exec(input))
 
-    pub def loop(): TopLevel[Unit] = 
+    pub def toplevelLoop(): TopLevel[Unit] = 
+        let* _ = printBanner();
+        loop()
+
+    def loop(): TopLevel[Unit] = 
         let* _      = consolePrintPrompt();
         let* input  = liftAction(_ -> Console.readLine()) |> map(x -> Option.getWithDefault(x, ""));
         match decodeInput(input) {
@@ -196,5 +202,22 @@ namespace FlixInteractive/TopLevel {
         let* jar    = getFlixJarPath();
         let* main1  = liftAction(_ -> System/FilePath.new(fileName));
         liftResult(_ -> FlixInteractive/ExecFlix.execFlix(cwd, jar, main1 :: Nil))
+
+    def printBanner(): TopLevel[Unit] = 
+        let xs = 
+                " _____  _      _   _   _ "
+            ::  "|  ___|| |    | | | | | |"
+            ::  "| |    | |    | | | |_| |"
+            ::  "| |__  | |    | | |_   _|"
+            ::  "|  __| | |    | |   | |  "
+            ::  "| |    | |    | |  _| |_ "
+            ::  "| |    | |    | | |  _  |"
+            ::  "| |    | |___ | | | | | |"
+            ::  "|_|    |_____||_| |_| |_|  Interactive"
+            ::  ""
+            :: Nil;
+        
+        liftAction(_ -> List.foreach(Console.printLine, xs))
+
 
 }    
