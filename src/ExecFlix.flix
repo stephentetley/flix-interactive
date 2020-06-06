@@ -24,8 +24,12 @@ namespace FlixInteractive/ExecFlix {
     pub def execFlix(workingDirectory: FilePath, jarPath: System.FilePath, sources: List[System.FilePath]): Result[FlixAnswer, System.Error] & Impure = 
         use Result.flatMap;
         use System/Process.{directory!, start, getInput, waitFor};
+        let resolveToString = x -> System/FilePath.append(workingDirectory, x) |> System/FilePath.toString;
         let jar     = System/FilePath.toString(jarPath);
-        let args    = ("-jar" :: jar :: List.map(System/FilePath.toString, sources)) |> List.toArray;
+        let args    = ("-jar" :: jar :: List.map(resolveToString, sources)) |> List.toArray;
+        let _       = Console.printLine("TEMP/args...");
+        let _       = Array.foreach(Console.printLine, args);
+        let _       = Console.printLine("... END/args");
         let pb      = System/Process.newProcessBuilder("java", args);
         let _       = pb.directory!(workingDirectory);
         let* proc   = start(pb);
