@@ -232,6 +232,10 @@ namespace FlixInteractive/TopLevel {
                 let* ans2   = execFlix("InteractiveB.flix");
                 return(ans2.stdOut)
             }
+            case  FlixInteractive/DecodeEval/EvalAnswer.UnhandledError(s) => {
+                let* _ = consolePrint(ans1.stdOut);
+                return(s)
+            }
             case e => {
                 let str = FlixInteractive/DecodeEval.showMessage(e);
                 return(str)
