@@ -27,7 +27,7 @@ namespace FlixInteractive/TopLevel {
 
     pub def runTopLevel(x: TopLevel[a]): Result[a, System.Error] & Impure = 
         let wdPath = System/FilePath.new("e:/coding/flix/temp");
-        let flixPath = System/FilePath.new("../flix.jar" );
+        let flixPath = System/FilePath.new("e:/coding/flix/temp/flix-working.jar" );
         let state = { cwd = wdPath, pathToFlixJar = flixPath};
         match apply1(x, state) {
             case Ok((a, _)) => Ok(a)
@@ -162,9 +162,9 @@ namespace FlixInteractive/TopLevel {
         }
 
 
-    def writeMain(program: Doc): TopLevel[Unit] = 
+    def writeMain(fileName: String, program: Doc): TopLevel[Unit] = 
         let* cwd    = getWorkingDirectory();
-        let* file1  = liftAction(_ -> System/FilePath.new("Main.flix"));
+        let* file1  = liftAction(_ -> System/FilePath.new(fileName));
         let* path   = liftAction(_ -> System/FilePath.append(cwd, file1));
         let* spath  = liftAction(_ -> System/FilePath.toString(path));
         let* _      = liftResult(_ -> Text/PrettyPrint.writePretty!(160, spath, Text/Charset.utf_8(), program));
@@ -173,21 +173,16 @@ namespace FlixInteractive/TopLevel {
     
 
     def compileAndRun(expr: String): TopLevel[String] = 
-        let prgm1   = FlixInteractive/GenProgram.genWithoutType(expr);
-        let* _      = writeMain(prgm1);
-        let* ans1   = execFlix();
-        // let* _      = consolePrint("stdout: <<<" + ans1.stdOut + ">>>");
-        // let* _      = consolePrint("stderr: <<<" + ans1.stdErr + ">>>");
-        // let* _      = consolePrint("decodeEval...");
+        let prgm1   = FlixInteractive/GenProgram.genProgramWithoutType(expr);
+        let* _      = writeMain("InteractiveA.flix", prgm1);
+        let* ans1   = execFlix("InteractiveA.flix");
         let* eval1  = liftResult(_ -> FlixInteractive/DecodeEval.decodeEval(ans1.stdOut, ans1.stdErr));
-        // let* _      = consolePrint("decodeEval done");
-        let* _      = consolePrint(FlixInteractive/DecodeEval.showMessage(eval1));
         match eval1 {
             case FlixInteractive/DecodeEval/EvalAnswer.ValidAnswer(s) =>  return(s)
             case FlixInteractive/DecodeEval/EvalAnswer.TypeEvaluation(typename) => { 
-                let prgm2   = FlixInteractive/GenProgram.genWithType(expr, typename);
-                let* _      = writeMain(prgm2);
-                let* ans2   = execFlix();
+                let prgm2   = FlixInteractive/GenProgram.genProgramWithType(expr, typename);
+                let* _      = writeMain("InteractiveB.flix", prgm2);
+                let* ans2   = execFlix("InteractiveB.flix");
                 return(ans2.stdOut)
             }
             case e => {
@@ -196,10 +191,10 @@ namespace FlixInteractive/TopLevel {
             }
         }
         
-    def execFlix(): TopLevel[FlixAnswer] = 
+    def execFlix(fileName: String): TopLevel[FlixAnswer] = 
         let* cwd    = getWorkingDirectory();
         let* jar    = getFlixJarPath();
-        let* main1  = liftAction(_ -> System/FilePath.new("Main.flix"));
+        let* main1  = liftAction(_ -> System/FilePath.new(fileName));
         liftResult(_ -> FlixInteractive/ExecFlix.execFlix(cwd, jar, main1 :: Nil))
 
 }    

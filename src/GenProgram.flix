@@ -18,6 +18,11 @@ use Text/PrettyPrint.{Doc, text, hang, semi, line, tupled, dquotes};
 
 namespace FlixInteractive/GenProgram {
 
+    enum Printer { 
+        case Simple(String),         // builtin call
+        case WithHelper(String, Doc)
+    }
+
     def <>(x: Doc, y: Doc): Doc = Text/PrettyPrint.beside(x,y)
     def <<>>(x: Doc, y:Doc): Doc = Text/PrettyPrint.besideSpace(x,y)
     def <&>(x: Doc, y: Doc): Doc = x <> line() <> y
@@ -39,13 +44,53 @@ namespace FlixInteractive/GenProgram {
         )
 
     
-    pub def genWithoutType(expr: String): Doc = genMain(text(expr))
+    pub def genProgramWithoutType(expr: String): Doc = genMain(text(expr))
+
+    def blankLine(): Doc = Text/PrettyPrint.linebreak()
 
 
-    pub def genWithType(expr: String, typeName: String): Doc = 
-        match FlixInteractive/Typing.getPrinter(typeName) {
-            case None => { let body = string("<<" + typeName + ">>"); genMain(body)}
-            case Some(fn) => { let body = funcall(fn, text(expr) :: Nil); genMain(body)}
+    pub def genProgramWithType(expr: String, typeName: String): Doc = 
+        match getPrinter(typeName) {
+            case None => { 
+                let body = string("<<" + typeName + ">>"); 
+                genMain(body)
+            }
+            case Some(Simple(name)) => { 
+                let body = funcall(name, text(expr) :: Nil); 
+                genMain(body)
+            }
+            case Some(WithHelper(name, helper)) => {
+                let body = funcall(name, text(expr) :: Nil); 
+                helper <&> blankLine() <&> genMain(body)
+            }
         }
+
+
+    
+    /// TODO - obviously we will need something like a type representation
+    /// and a generic show function. But that's complicated so later...
+    def printers(): Map[String, Printer] = 
+        Map#{ "String"      -> Simple("identity")
+            , "Char"        -> Simple("Char.toString")
+            , "Int16"       -> Simple("Int16.toString")
+            , "Int16"       -> Simple("Int16.toString")
+            , "Int32"       -> Simple("Int32.toString")
+            , "Int64"       -> Simple("Int64.toString")
+            , "BigInt"      -> Simple("BigInt.toString")
+            , "Float32"     -> Simple("Float32.toString")
+            , "Float64"     -> Simple("Float64.toString")
+            , "Bool"        -> WithHelper("printBool",   printBool())
+            }
+
+
+
+    def printBool(): Doc = 
+        hang(4, text("def printBool(x: Bool): String = ") 
+            <&> text("if (x)") <<>> dquotes(text("true")) <<>> text("else") <<>> dquotes(text("false"))
+        ) 
+
+    def getPrinter(typeName: String): Option[Printer] = 
+        Map.get(typeName, printers())
+
 
 }
