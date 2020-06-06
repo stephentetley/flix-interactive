@@ -79,15 +79,19 @@ namespace FlixInteractive/GenProgram {
             , "BigInt"      -> Simple("BigInt.toString")
             , "Float32"     -> Simple("Float32.toString")
             , "Float64"     -> Simple("Float64.toString")
+            , "Unit"        -> WithHelper("printUnit",   printUnit())
             , "Bool"        -> WithHelper("printBool",   printBool())
             }
-
-
 
     def printBool(): Doc = 
         hang(4, text("def printBool(x: Bool): String = ") 
             <&> text("if (x)") <<>> dquotes(text("true")) <<>> text("else") <<>> dquotes(text("false"))
         ) 
+
+    def printUnit(): Doc = 
+        text("def printUnit(_: Unit): String =") <<>> dquotes(text("()"))
+        
+
 
     def getPrinter(typeName: String): Option[Printer] = 
         Map.get(typeName, printers())
