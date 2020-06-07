@@ -26,8 +26,9 @@ namespace FlixInteractive/TopLevel {
     pub opaque type TopLevel[a] = State ~> Result[(a, State), System.Error]
 
     pub def runTopLevel(x: TopLevel[a]): Result[a, System.Error] & Impure = 
-        let wdPath = System/FilePath.new("e:/coding/flix/temp");
-        let flixPath = System/FilePath.new("e:/coding/flix/temp/flix-working.jar" );
+        let wdPath = System/Directory.getCurrentDirectory();
+        let temp1 = System/FilePath.new("flix.jar");
+        let flixPath = System/FilePath.append(wdPath, temp1);
         let state = { cwd = wdPath, pathToFlixJar = flixPath, modulePaths = Nil};
         match apply1(x, state) {
             case Ok((a, _)) => Ok(a)
@@ -121,6 +122,13 @@ namespace FlixInteractive/TopLevel {
         TopLevel(st -> Ok((st.pathToFlixJar, st)) as & Impure)
 
 
+    def setFlixJarPath!(x: FilePath): TopLevel[Unit] = 
+        TopLevel(st -> 
+            let st1 = { pathToFlixJar = x | st};
+            Ok((), st1) as & Impure
+        )
+
+
     def consolePrint(s: String): TopLevel[Unit] = 
         liftAction(_ -> Console.printLine(s))
 
@@ -135,6 +143,7 @@ namespace FlixInteractive/TopLevel {
         case Load(String),
         case Pwd,
         case Quit,
+        case SetFlixJar(String),
         case Unknown(String), 
         case Unload(String)
     }
@@ -155,6 +164,7 @@ namespace FlixInteractive/TopLevel {
                 case "pwd"      => Ok(Pwd)
                 case "quit"     => Ok(Quit)
                 case "q"        => Ok(Quit)
+                case "setflix"  => Ok(SetFlixJar(rest))
                 case "unload"   => Ok(Unload(rest))
                 case _          => Ok(Unknown(cmd))
             }
@@ -196,6 +206,13 @@ namespace FlixInteractive/TopLevel {
                 loop()
             }
             case Quit => return()
+            case SetFlixJar(s) => { 
+                let jar     = String.trim(s);
+                let* path   = liftAction(_ -> System/FilePath.new(jar));
+                let* _      = setFlixJarPath!(path);
+                loop()
+            }
+            
             case Unknown(s) => {
                 let* _ = consolePrint("Unknown command: " + s);
                 loop()
