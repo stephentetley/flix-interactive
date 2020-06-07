@@ -15,6 +15,7 @@
  */
 
 use Text/PrettyPrint.{Doc, text, hang, semi, line, tupled, dquotes};
+use Text/PrettyPrint.{<>, <<>>, <&>};
 
 namespace FlixInteractive/GenProgram {
 
@@ -23,9 +24,6 @@ namespace FlixInteractive/GenProgram {
         case WithHelper(String, Doc)
     }
 
-    def <>(x: Doc, y: Doc): Doc = Text/PrettyPrint.beside(x,y)
-    def <<>>(x: Doc, y:Doc): Doc = Text/PrettyPrint.besideSpace(x,y)
-    def <&>(x: Doc, y: Doc): Doc = x <> line() <> y
 
     def string(s: String): Doc = 
         dquotes(text(s))
