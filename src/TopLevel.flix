@@ -180,7 +180,7 @@ namespace FlixInteractive/TopLevel {
         let* input  = liftAction(_ -> Console.readLine()) |> map(x -> Option.getWithDefault(x, ""));
         match decodeInput(input) {
             case Cwd(dir) => { 
-                let* path   = liftAction(_ -> System/FilePath.new(dir));
+                let path    = System/FilePath.new(dir);
                 let* _      = setWorkingDirectory!(path);
                 loop()
             }
@@ -195,20 +195,20 @@ namespace FlixInteractive/TopLevel {
             }
             case Load(s) => { 
                 let dir     = String.trim(s);
-                let* path   = liftAction(_ -> System/FilePath.new(dir));
+                let  path   = System/FilePath.new(dir);
                 let* _      = addModule!(path);
                 loop()
             }
             case Pwd => { 
                 let* cwd    = getWorkingDirectory();
-                let* ans    = liftAction(_ -> System/FilePath.toString(cwd));
+                let ans     = System/FilePath.toString(cwd);
                 let* _      = consolePrint(ans);
                 loop()
             }
             case Quit => return()
             case SetFlixJar(s) => { 
                 let jar     = String.trim(s);
-                let* path   = liftAction(_ -> System/FilePath.new(jar));
+                let path    = System/FilePath.new(jar);
                 let* _      = setFlixJarPath!(path);
                 loop()
             }
@@ -219,7 +219,7 @@ namespace FlixInteractive/TopLevel {
             }
             case Unload(s) => { 
                 let dir     = String.trim(s);
-                let* path   = liftAction(_ -> System/FilePath.new(dir));
+                let path    = System/FilePath.new(dir);
                 let* _      = removeModule!(path);
                 loop()
             }
@@ -228,9 +228,9 @@ namespace FlixInteractive/TopLevel {
 
     def writeMain(fileName: String, program: Doc): TopLevel[Unit] = 
         let* cwd    = getWorkingDirectory();
-        let* file1  = liftAction(_ -> System/FilePath.new(fileName));
-        let* path   = liftAction(_ -> System/FilePath.append(cwd, file1));
-        let* spath  = liftAction(_ -> System/FilePath.toString(path));
+        let file1   = System/FilePath.new(fileName);
+        let path    = System/FilePath.append(cwd, file1);
+        let spath   = System/FilePath.toString(path);
         let* _      = liftResult(_ -> Text/PrettyPrint.writePretty!(160, spath, Text/Charset.utf_8(), program));
         return()
 
@@ -266,7 +266,7 @@ namespace FlixInteractive/TopLevel {
     def execFlix(fileName: String): TopLevel[FlixAnswer] = 
         let* cwd    = getWorkingDirectory();
         let* jar    = getFlixJarPath();
-        let* main1  = liftAction(_ -> System/FilePath.new(fileName));
+        let main1   = System/FilePath.new(fileName);
         let* paths  = getModules();
         liftResult(_ -> FlixInteractive/ExecFlix.execFlix(cwd, jar, main1 :: paths))
 
