@@ -59,9 +59,9 @@ namespace FlixInteractive/DecodeEval {
     ///
     def decodeRuntimeError(stderr: String): Result[EvalAnswer, System.Error] & Impure = 
         use Result.flatMap;
-        use Text/Regex/MatchEvaluator.{getCaptureByName};
+        use Text/Regex/MatchEvaluator.{getNamedCapture};
         let* patt   = Text/Regex/Pattern.compile("^Exception in thread \u0022main\u0022 (?<message>.+)");
-        let* ans    = Text/Regex.evaluateSubmatch(patt, getCaptureByName("message"), stderr);
+        let* ans    = Text/Regex.evalContains(stderr, patt, getNamedCapture("message"));
         Ok(RuntimeError(ans))
 
     def decodeStdout(stdout: String): Result[EvalAnswer, System.Error] & Impure = 
@@ -88,10 +88,10 @@ namespace FlixInteractive/DecodeEval {
 
     def getErrorName(stdout: String): Option[String] & Impure = 
         use Result.flatMap;
-        use Text/Regex/MatchEvaluator.{getCaptureByName};
+        use Text/Regex/MatchEvaluator.{getNamedCapture};
         let step = () -> {
             let* patt = Text/Regex/Pattern.compile("\u002D{2,} (?<errname>.+ Error) \u002D{50,}");
-            Text/Regex.evaluateSubmatch(patt, getCaptureByName("errname"), stdout)
+            Text/Regex.evalContains(stdout, patt, getNamedCapture("errname"))
         }; 
         step() |> Result.toOption
 
@@ -105,9 +105,9 @@ namespace FlixInteractive/DecodeEval {
     pub def getUnresolvedName(stdout: String): Result[String, System.Error] & Impure = 
         use Result.flatMap;
         use Text/Regex/Pattern.Flag.{Multiline};
-        use Text/Regex/MatchEvaluator.{getCaptureByName};
+        use Text/Regex/MatchEvaluator.{getNamedCapture};
         let* patt   = Text/Regex/Pattern.compileWithFlags("Undefined name '\u001B\u005B31m(?<undefined>.+)\u001B\u005B0m'", Multiline :: Nil);
-        let* ans    = Text/Regex.evaluateSubmatch(patt, getCaptureByName("undefined"), stdout);
+        let* ans    = Text/Regex.evalContains(stdout, patt, getNamedCapture("undefined"));
         Ok(ans)
 
     ///
@@ -117,9 +117,9 @@ namespace FlixInteractive/DecodeEval {
     pub def getTypeOne(stdout: String): Result[String, System.Error] & Impure = 
         use Result.flatMap;
         use Text/Regex/Pattern.Flag.{Multiline};
-        use Text/Regex/MatchEvaluator.{getCaptureByName};
+        use Text/Regex/MatchEvaluator.{getNamedCapture};
         let* patt   = Text/Regex/Pattern.compileWithFlags("Type One: \u001B\u005B36m(?<name>.+)\u001B\u005B0m", Multiline :: Nil);
-        let* ans    = Text/Regex.evaluateSubmatch(patt, getCaptureByName("name"), stdout);
+        let* ans    = Text/Regex.evalContains(stdout, patt, getNamedCapture("name"));
         Ok(ans)
 
     ///
@@ -129,9 +129,9 @@ namespace FlixInteractive/DecodeEval {
     pub def getTypeTwo(stdout: String): Result[String, System.Error] & Impure = 
         use Result.flatMap;
         use Text/Regex/Pattern.Flag.{Multiline};
-        use Text/Regex/MatchEvaluator.{getCaptureByName};
+        use Text/Regex/MatchEvaluator.{getNamedCapture};
         let* patt   = Text/Regex/Pattern.compileWithFlags("Type Two: \u001B\u005B35m(?<name>.+)\u001B\u005B0m", Multiline :: Nil);
-        let* ans    = Text/Regex.evaluateSubmatch(patt, getCaptureByName("name"), stdout);
+        let* ans    = Text/Regex.evalContains(stdout, patt, getNamedCapture("name"));
         Ok(ans)
 
 
@@ -145,7 +145,7 @@ namespace FlixInteractive/DecodeEval {
         use Result.flatMap;
         use Text/Regex/Pattern.Flag.{Multiline};
         let* patt   = Text/Regex/Pattern.compileWithFlags("\u001B\u005B0m\s+Console\.printLine\(ans\)", Multiline :: Nil);
-        let ans     = Text/Regex.isSubmatch(patt, stdout);
+        let ans     = Text/Regex.contains(stdout, patt);
         Ok(ans)
 
 

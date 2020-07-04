@@ -151,10 +151,10 @@ namespace FlixInteractive/TopLevel {
 
     def decodeInput(input: String): Command = 
         use Result.flatMap;
-        use Text/Regex/MatchEvaluator.{tuple2, getCaptureByName};
+        use Text/Regex/MatchEvaluator.{tuple2, getNamedCapture};
         let step = () -> {
             let* patt = Text/Regex/Pattern.compile(":(?<cmd>\w+)(?<rest>.*)");
-            let* (cmd, rest) = Text/Regex.evaluateMatch(patt, tuple2(getCaptureByName("cmd"), getCaptureByName("rest")), input) as & Pure;
+            let* (cmd, rest) = Text/Regex.evalMatches(input, patt, tuple2(getNamedCapture("cmd"), getNamedCapture("rest"))) as & Pure;
             match cmd { 
                 case "cwd"      => Ok(Cwd(rest))
                 case "help"     => Ok(Help)
