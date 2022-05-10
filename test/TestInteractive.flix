@@ -76,8 +76,8 @@ use FlixInteractive/GenProgram.{genWithoutType, genWithType};
 //     };
 //     step() |> x -> Result.getWithDefault(x, "** bad **")   
 
-@test
-def main(): Result[Unit, System.Error] & Impure = 
-    use FlixInteractive/TopLevel.{runTopLevel, loop};
-    runTopLevel(loop())
+/// @test
+/// def main01(): Int32 & Impure = 
+///     use FlixInteractive/TopLevel.{runTopLevel, loop};
+///     runTopLevel(loop())
 

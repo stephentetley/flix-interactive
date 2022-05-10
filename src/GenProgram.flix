@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-use Text/PrettyPrint.{Doc, text, hang, semi, line, tupled, dquotes};
-use Text/PrettyPrint.{<>, <<>>, <&>};
 
 namespace FlixInteractive/GenProgram {
+
+    use Text/PrettyPrint.{Doc, text, hang, semi, line, tupled, dquotes};
+    use Text/PrettyPrint.{<>, <<>>, <&>};
+
 
     enum Printer { 
         case Simple(String),         // builtin call
@@ -44,8 +46,6 @@ namespace FlixInteractive/GenProgram {
     
     pub def genProgramWithoutType(expr: String): Doc = genMain(text(expr))
 
-    def blankLine(): Doc = Text/PrettyPrint.linebreak()
-
 
     pub def genProgramWithType(expr: String, typeName: String): Doc = 
         match getPrinter(typeName) {
@@ -59,7 +59,7 @@ namespace FlixInteractive/GenProgram {
             }
             case Some(WithHelper(name, helper)) => {
                 let body = funcall(name, text(expr) :: Nil); 
-                helper <&> blankLine() <&> genMain(body)
+                helper <&> text("") <&> genMain(body)
             }
         }
 
@@ -68,17 +68,17 @@ namespace FlixInteractive/GenProgram {
     /// TODO - obviously we will need something like a type representation
     /// and a generic show function. But that's complicated so later...
     def printers(): Map[String, Printer] = 
-        Map#{ "String"      -> Simple("identity")
-            , "Char"        -> Simple("Char.toString")
-            , "Int16"       -> Simple("Int16.toString")
-            , "Int16"       -> Simple("Int16.toString")
-            , "Int32"       -> Simple("Int32.toString")
-            , "Int64"       -> Simple("Int64.toString")
-            , "BigInt"      -> Simple("BigInt.toString")
-            , "Float32"     -> Simple("Float32.toString")
-            , "Float64"     -> Simple("Float64.toString")
-            , "Unit"        -> WithHelper("printUnit",   printUnit())
-            , "Bool"        -> WithHelper("printBool",   printBool())
+        Map#{ "String"      => Simple("identity")
+            , "Char"        => Simple("Char.toString")
+            , "Int16"       => Simple("Int16.toString")
+            , "Int16"       => Simple("Int16.toString")
+            , "Int32"       => Simple("Int32.toString")
+            , "Int64"       => Simple("Int64.toString")
+            , "BigInt"      => Simple("BigInt.toString")
+            , "Float32"     => Simple("Float32.toString")
+            , "Float64"     => Simple("Float64.toString")
+            , "Unit"        => WithHelper("printUnit",   printUnit())
+            , "Bool"        => WithHelper("printBool",   printBool())
             }
 
     def printBool(): Doc = 

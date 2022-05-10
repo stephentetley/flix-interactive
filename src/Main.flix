@@ -14,7 +14,7 @@
  * limitations under the License.
  */
  
-def main(): Result[Unit, System.Error] & Impure = 
+def main(): Result[Unit, String] & Impure = 
     use FlixInteractive/TopLevel.{runTopLevel, toplevelLoop};
     runTopLevel(toplevelLoop())
 

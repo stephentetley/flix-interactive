@@ -14,21 +14,32 @@
  * limitations under the License.
  */
 
-use System.FilePath;
-use Text/PrettyPrint.{Doc, writePretty!};
 
-use FlixInteractive/ExecFlix.FlixAnswer;
+
+
+
 
 namespace FlixInteractive/TopLevel {
 
-    type alias State = { cwd: FilePath, pathToFlixJar: FilePath, modulePaths: List[FilePath]}
+    
+    use FlixSandbox/System.FilePath;
+    use Text/PrettyPrint.{Doc, writePretty!};
 
-    pub opaque type TopLevel[a] = State ~> Result[(a, State), System.Error]
+    use FlixInteractive/ExecFlix.FlixAnswer;
 
-    pub def runTopLevel(x: TopLevel[a]): Result[a, System.Error] & Impure = 
-        let wdPath = System/Directory.getCurrentDirectory();
-        let temp1 = System/FilePath.new("flix.jar");
-        let flixPath = System/FilePath.append(wdPath, temp1);
+    type alias State = 
+        { cwd :: FilePath
+        , pathToFlixJar :: FilePath
+        , modulePaths :: List[FilePath]
+        }
+
+    pub opaque type TopLevel[a] = State -> Result[(a, State), String] & Impure
+
+    pub def runTopLevel(x: TopLevel[a]): Result[a, String] & Impure = 
+        use Result.flatMap;
+        let* wdPath = FlixSandbox/System/Directory.getCurrentDirectory();
+        let temp1 = FlixSandbox/System/FilePath.filePath("flix.jar");
+        let flixPath = FlixSandbox/System/FilePath.append(wdPath, temp1);
         let state = { cwd = wdPath, pathToFlixJar = flixPath, modulePaths = Nil};
         match apply1(x, state) {
             case Ok((a, _)) => Ok(a)
@@ -41,7 +52,7 @@ namespace FlixInteractive/TopLevel {
     pub def return(x: a): TopLevel[a] = 
         TopLevel(st -> Ok((x,st)) as & Impure)
 
-    def apply1(f: TopLevel[a], st: State): Result[(a, State), System.Error] & Impure = 
+    def apply1(f: TopLevel[a], st: State): Result[(a, State), String] & Impure = 
         let TopLevel(fn) = f;
         fn(st)
 
@@ -75,11 +86,11 @@ namespace FlixInteractive/TopLevel {
     pub def flatMap(k: a -> TopLevel[b], x: TopLevel[a]): TopLevel[b] = bind(x, k)
 
 
-    def liftAction(action: Unit ~> a): TopLevel[a] = 
+    def liftAction(action: Unit -> a & Impure): TopLevel[a] = 
         TopLevel(st -> { let a = action(); Ok((a, st)) })
 
 
-    def liftResult(action: Unit ~> Result[a, System.Error]): TopLevel[a] = 
+    def liftResult(action: Unit -> Result[a, String] & Impure): TopLevel[a] = 
         TopLevel(st -> 
             match action() { 
                 case Ok(a) => Ok(a, st)
@@ -101,7 +112,7 @@ namespace FlixInteractive/TopLevel {
         )
 
     def removeModule!(x: FilePath): TopLevel[Unit] = 
-        let notequals = y -> !(System/FilePath.equals(x, y));
+        let notequals = y -> not (x == y);
         TopLevel(st -> 
             let xs = st.modulePaths;
             let xs1 = List.filter(notequals, xs);
@@ -137,24 +148,25 @@ namespace FlixInteractive/TopLevel {
 
 
     enum Command {
-        case Cwd(String),
-        case Exec(String),
-        case Help,
-        case Load(String),
-        case Pwd,
-        case Quit,
-        case SetFlixJar(String),
-        case Unknown(String), 
+        case Cwd(String)
+        case Exec(String)
+        case Help
+        case Load(String)
+        case Pwd
+        case Quit
+        case SetFlixJar(String)
+        case Unknown(String)
         case Unload(String)
     }
 
 
     def decodeInput(input: String): Command = 
         use Result.flatMap;
-        use Text/Regex/MatchEvaluator.{tuple2, getNamedCapture};
+        use Applicative.{product};
+        use Text/RegexEval/MatchEvaluator.{getCaptureNamed};
         let step = () -> {
-            let* patt = Text/Regex/Pattern.compile(":(?<cmd>\w+)(?<rest>.*)");
-            let* (cmd, rest) = Text/Regex.evalMatches(input, patt, tuple2(getNamedCapture("cmd"), getNamedCapture("rest"))) as & Pure;
+            let* patt = Text/Regex/Pattern.compile(":(?<cmd>\\w+)(?<rest>.*)");
+            let* (cmd, rest) = Text/RegexEval/Regex.matches(patt, product(getCaptureNamed("cmd"), getCaptureNamed("rest")), input) as & Pure;
             match cmd { 
                 case "cwd"      => Ok(Cwd(rest))
                 case "help"     => Ok(Help)
@@ -169,7 +181,7 @@ namespace FlixInteractive/TopLevel {
                 case _          => Ok(Unknown(cmd))
             }
         };
-        step() |> x -> Result.getWithDefault(x, Exec(input))
+        step() |> Result.getWithDefault(Exec(input))
 
     pub def toplevelLoop(): TopLevel[Unit] = 
         let* _ = printBanner();
@@ -177,10 +189,10 @@ namespace FlixInteractive/TopLevel {
 
     def loop(): TopLevel[Unit] = 
         let* _      = consolePrintPrompt();
-        let* input  = liftAction(_ -> Console.readLine()) |> map(x -> Option.getWithDefault(x, ""));
+        let* input  = liftAction(_ -> Console.readLine()) |> map(Option.getWithDefault(""));
         match decodeInput(input) {
             case Cwd(dir) => { 
-                let path    = System/FilePath.new(dir);
+                let path    = FlixSandbox/System/FilePath.filePath(dir);
                 let* _      = setWorkingDirectory!(path);
                 loop()
             }
@@ -195,20 +207,20 @@ namespace FlixInteractive/TopLevel {
             }
             case Load(s) => { 
                 let dir     = String.trim(s);
-                let  path   = System/FilePath.new(dir);
+                let  path   = FlixSandbox/System/FilePath.filePath(dir);
                 let* _      = addModule!(path);
                 loop()
             }
             case Pwd => { 
                 let* cwd    = getWorkingDirectory();
-                let ans     = System/FilePath.toString(cwd);
+                let ans     = ToString.toString(cwd);
                 let* _      = consolePrint(ans);
                 loop()
             }
             case Quit => return()
             case SetFlixJar(s) => { 
                 let jar     = String.trim(s);
-                let path    = System/FilePath.new(jar);
+                let path    = FlixSandbox/System/FilePath.filePath(jar);
                 let* _      = setFlixJarPath!(path);
                 loop()
             }
@@ -219,7 +231,7 @@ namespace FlixInteractive/TopLevel {
             }
             case Unload(s) => { 
                 let dir     = String.trim(s);
-                let path    = System/FilePath.new(dir);
+                let path    = FlixSandbox/System/FilePath.filePath(dir);
                 let* _      = removeModule!(path);
                 loop()
             }
@@ -228,10 +240,10 @@ namespace FlixInteractive/TopLevel {
 
     def writeMain(fileName: String, program: Doc): TopLevel[Unit] = 
         let* cwd    = getWorkingDirectory();
-        let file1   = System/FilePath.new(fileName);
-        let path    = System/FilePath.append(cwd, file1);
-        let spath   = System/FilePath.toString(path);
-        let* _      = liftResult(_ -> Text/PrettyPrint.writePretty!(160, spath, Text/Charset.utf_8(), program));
+        let file1   = FlixSandbox/System/FilePath.filePath(fileName);
+        let path    = FlixSandbox/System/FilePath.append(cwd, file1);
+        /// let spath   = ToString.toString(path);
+        let* _      = liftResult(_ -> Text/PrettyPrint.writePretty(160, path, FlixSandbox/Text/Charset.utf_8(), program));
         return()
 
     
@@ -266,7 +278,7 @@ namespace FlixInteractive/TopLevel {
     def execFlix(fileName: String): TopLevel[FlixAnswer] = 
         let* cwd    = getWorkingDirectory();
         let* jar    = getFlixJarPath();
-        let main1   = System/FilePath.new(fileName);
+        let main1   = FlixSandbox/System/FilePath.filePath(fileName);
         let* paths  = getModules();
         liftResult(_ -> FlixInteractive/ExecFlix.execFlix(cwd, jar, main1 :: paths))
 

@@ -14,24 +14,29 @@
  * limitations under the License.
  */
 
-use System.FilePath;
+
 
 namespace FlixInteractive/ExecFlix {
 
+    use FlixSandbox/System.FilePath;
 
-    type alias FlixAnswer = { exitCode: Int32, stdOut: String, stdErr: String }
+    pub type alias FlixAnswer = 
+        { exitCode :: Int32
+        , stdOut :: String
+        , stdErr :: String 
+        }
 
-    pub def execFlix(workingDirectory: FilePath, jarPath: System.FilePath, sources: List[System.FilePath]): Result[FlixAnswer, System.Error] & Impure = 
+    pub def execFlix(workingDirectory: FilePath, jarPath: FilePath, sources: List[FilePath]): Result[FlixAnswer, String] & Impure = 
         use Result.flatMap;
-        use System/Process.{directory!, start, getInput, waitFor};
-        let resolveToString = x -> System/FilePath.append(workingDirectory, x) |> System/FilePath.toString;
-        let jar     = System/FilePath.toString(jarPath);
-        let args    = ("-jar" :: jar :: List.map(resolveToString, sources)) |> List.toArray;
-        let pb      = System/Process.newProcessBuilder("java", args);
-        let _       = pb.directory!(workingDirectory);
+        use FlixSandbox/System/Process.{directory!, start, getInput, waitFor};
+        let resolveToString = x -> FlixSandbox/System/FilePath.append(workingDirectory, x) |> ToString.toString;
+        let jar     = ToString.toString(jarPath);
+        let args    = ("-jar" :: jar :: List.map(resolveToString, sources));
+        let pb      = FlixSandbox/System/Process.processBuilder("java", args);
+        let _       = directory!(pb, workingDirectory);
         let* proc   = start(pb);
-        let* output = getInput(proc, Text/Charset.utf_8());
-        let* errors = getInput(proc, Text/Charset.utf_8());
+        let* output = getInput(proc, FlixSandbox/Text/Charset.utf_8());
+        let* errors = getInput(proc, FlixSandbox/Text/Charset.utf_8());
         let* exit   = waitFor(proc);
         Ok({ exitCode = exit, stdOut = output, stdErr = errors })
 
