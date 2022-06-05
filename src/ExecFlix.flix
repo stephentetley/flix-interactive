@@ -28,13 +28,14 @@ namespace FlixInteractive/ExecFlix {
 
     pub def execFlix(workingDirectory: FilePath, jarPath: FilePath, sources: List[FilePath]): Result[FlixAnswer, String] & Impure = 
         use Result.flatMap;
-        use FlixSandbox/System/Process.{directory!, start, getInput, waitFor};
+        use Applicative.{*>};
+        use FlixSandbox/System/Process.{getInput, waitFor};
+        use FlixSandbox/System/ProcessBuilder.{setDirectory, command};
         let resolveToString = x -> FlixSandbox/System/FilePath.append(workingDirectory, x) |> ToString.toString;
         let jar     = ToString.toString(jarPath);
         let args    = ("-jar" :: jar :: List.map(resolveToString, sources));
-        let pb      = FlixSandbox/System/Process.processBuilder("java", args);
-        let _       = directory!(pb, workingDirectory);
-        let* proc   = start(pb);
+        let pb      = command("java", args) *> setDirectory(workingDirectory);
+        let* proc   = FlixSandbox/System/ProcessBuilder.start(pb);
         let* output = getInput(proc, FlixSandbox/Text/Charset.utf_8());
         let* errors = getInput(proc, FlixSandbox/Text/Charset.utf_8());
         let* exit   = waitFor(proc);

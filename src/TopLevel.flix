@@ -33,7 +33,7 @@ namespace FlixInteractive/TopLevel {
         , modulePaths :: List[FilePath]
         }
 
-    pub opaque type TopLevel[a] = State -> Result[(a, State), String] & Impure
+    pub enum TopLevel[a](State -> Result[(a, State), String] & Impure)
 
     pub def runTopLevel(x: TopLevel[a]): Result[a, String] & Impure = 
         use Result.flatMap;
